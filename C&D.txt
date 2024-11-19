@@ -1,0 +1,437 @@
+COMPRESSION SOURCE CODE:
+
+#include <iostream>
+#include <fstream>
+#include <queue>
+#include <bitset>
+
+using namespace std;
+
+const int MAX_CHAR = 256; //ASCII characters
+
+struct NodeData {
+    char data;
+    int frequency;
+    string huffmanCode;
+    NodeData* left;
+    NodeData* right;
+
+    NodeData(char c, int freq) : data(c), frequency(freq), left(nullptr), right(nullptr) {}
+};
+
+struct CompareNodes {
+    bool operator()(NodeData* left, NodeData* right) {
+        return left->frequency > right->frequency;
+    }
+};
+
+class HuffmanCoding {
+private:
+    NodeData* root;
+
+public:
+    HuffmanCoding() : root(nullptr) {}
+
+    NodeData* buildHuffmanTree(ifstream& inputFile) {
+        priority_queue<NodeData*, vector<NodeData*>, CompareNodes> pq;
+        int charFrequency[MAX_CHAR] = {0};
+        char ch;
+
+        while (inputFile.get(ch)) {
+            charFrequency[static_cast<unsigned char>(ch)]++;
+        }
+
+        for (int i = 0; i < MAX_CHAR; ++i) {
+            if (charFrequency[i] > 0) {
+                pq.push(new NodeData(static_cast<char>(i), charFrequency[i]));
+            }
+        }
+
+        while (pq.size() > 1) {
+            NodeData* left = pq.top();
+            pq.pop();
+            NodeData* right = pq.top();
+            pq.pop();
+
+            NodeData* combined = new NodeData('\0', left->frequency + right->frequency);
+            combined->left = left;
+            combined->right = right;
+
+            pq.push(combined);
+        }
+
+        return pq.top();
+    }
+
+    void generateHuffmanCodes(NodeData* node, ofstream& outputFile, string code = "") {
+        if (!node) {
+            return;
+        }
+
+        if (node->data != '\0') {
+            node->huffmanCode = code;
+            outputFile << node->huffmanCode;
+        }
+
+        generateHuffmanCodes(node->left, outputFile, code + "0");
+        generateHuffmanCodes(node->right, outputFile, code + "1");
+    }
+
+    void compressFile(const string& inputFileName, const string& outputFileName) {
+        ifstream inputFile(inputFileName);
+        ofstream outputFile(outputFileName);
+
+        if (!inputFile.is_open() || !outputFile.is_open()) {
+            cerr << "Error opening files!" << endl;
+            return;
+        }
+
+        root = buildHuffmanTree(inputFile);
+        generateHuffmanCodes(root, outputFile);
+
+        // Ensure the length of the output is divisible by 8
+        int remainingBits = outputFile.tellp() % 8;
+        if (remainingBits > 0) {
+            int paddingZeros = 8 - remainingBits;
+            for (int i = 0; i < paddingZeros; ++i) {
+                outputFile << '0';
+            }
+        }
+
+        inputFile.close();
+        outputFile.close();
+    }
+
+    void readBinaryAndConvertToAscii(const string& inputFileName, const string& outputFileName) {
+        ifstream inputFile(inputFileName, ios::binary);
+        ofstream outputFile(outputFileName, ios::app); // Append to the existing file
+
+        if (!inputFile.is_open() || !outputFile.is_open()) {
+            cerr << "Error opening files for reading binary and writing ASCII!" << endl;
+            return;
+        }
+
+        char binaryChar;
+        string binaryString;
+        while (inputFile.get(binaryChar)) {
+            binaryString += binaryChar;
+        }
+
+        // Convert binary string to decimal
+        int decimalValue = stoi(binaryString, nullptr, 2);
+
+        // Convert decimal to ASCII
+        char asciiChar = static_cast<char>(decimalValuex);
+
+        // Write ASCII result to "Compressed.txt"
+        outputFile << ", " << decimalValue
+                   << ", " << asciiChar << endl;
+
+        inputFile.close();
+        outputFile.close();
+    }
+};
+
+int main() {
+    HuffmanCoding huffman;
+
+    cout << "Compressed File Successfully Created!" << endl;
+
+    // Create an input file with characters "Mississippi River"
+    ofstream inputFile("OriginalText.txt");
+    if (inputFile.is_open()) {
+        inputFile << "Mississippi River";
+        inputFile.close();
+    } else {
+        cerr << "Error creating input file!\n";
+        return 1;
+    }
+
+    // Compress the characters and write the output to "Compressed.txt"
+    string inputFileName = "OriginalText.txt";
+    string outputFileName = "Compressed.txt";
+    huffman.compressFile(inputFileName, outputFileName);
+
+    // Read the binary from "Compressed.txt" and convert to ASCII
+    huffman.readBinaryAndConvertToAscii(outputFileName, outputFileName);
+
+    return 0;
+}
+
+
+DECOMPRESSION SOURCE CODE:
+
+#include <iostream>
+#include <fstream>
+#include <bitset>
+#include <unordered_map>
+#include <queue>
+#include <vector>
+#include <string>
+
+using namespace std;
+
+const int MAX_CHAR = 256;
+
+struct NodeData
+    {
+        char data;
+        int frequency;
+        NodeData* left;
+        NodeData* right;
+
+        NodeData(char c, int freq) : data(c), frequency(freq), left(nullptr), right(nullptr) {}
+    };
+
+struct priorityNode
+    {
+        priorityNode *next; //used when making the queue
+        NodeData *node;  //used when making a tree
+        priorityNode (NodeData *x) : node (x), next (nullptr) {}
+    };
+
+class HuffmanDecoding
+    {
+    private:
+        priorityNode *frnt;
+        NodeData* root;
+        unordered_map<char, int> charFrequencyMap;
+
+    public:
+        HuffmanDecoding() : frnt(nullptr) {}
+        HuffmanDecoding(NodeData* rootNode) : root(rootNode){}//Buffer
+
+int buff()
+    {
+        ifstream inputFile2("Buffer.tne");
+
+        if (!inputFile2.is_open())
+            {
+                std::cerr << "Error opening input file!" << std::endl;
+            }
+        int buffer;
+        int tempBuff;
+        char y;
+        if (inputFile2 >> y)
+        {
+            tempBuff = stoi(string(1, y));
+            buffer = tempBuff;
+            cout << endl << "Buffer:" << buffer << endl;
+        } else
+        {
+            std::cerr << "Error reading character from the file!" << std::endl;
+        }
+        return buffer;
+    }
+
+void enqueue(NodeData *x)
+    {
+        priorityNode *prioQ = new priorityNode(x);
+        if (frnt == NULL || frnt->node->frequency > prioQ->node->frequency)
+            {
+                prioQ->next = frnt;
+                frnt = prioQ;
+            } else
+            {
+                priorityNode *temp = frnt;
+            while (temp->next != NULL && temp->next->node->frequency <= prioQ->node->frequency)
+            {
+                temp = temp->next;
+            }
+            prioQ->next = temp->next;
+            temp->next = prioQ;
+            }
+
+    }
+
+NodeData* dequeue()
+    {
+        NodeData *toReturn = nullptr;
+        if (frnt == nullptr)
+            {
+                cout << "No Data to Dequeue" << endl;
+            } else
+            {
+            toReturn = frnt->node;
+            priorityNode *temp = frnt;
+            frnt = frnt->next;
+            delete temp;
+            }
+        return toReturn;
+    }
+
+NodeData* buildHuffmanTree(ifstream& inputFile)
+    {
+    int counter = 0;
+    char ch;
+    char x;
+    int frequency;
+
+    while (inputFile.get(ch))
+        {
+            if (counter % 2 == 0) //if even
+        {
+            x = ch;
+        } else //if odd
+        {
+            frequency = stoi (string (1, ch));
+            NodeData* toNQ = new NodeData(x, frequency);
+            enqueue(toNQ);
+            frequency = 0;
+        }
+        counter++;
+    }
+
+NodeData *first, *second;
+        while (frnt != NULL && frnt->next != NULL)
+        {
+            first = dequeue();
+            second = dequeue();
+            NodeData *combined = new NodeData('\0', first->frequency + second->frequency);
+            combined->left = first;
+            combined->right = second;
+            enqueue(combined);
+        }
+
+            NodeData *toReturn = dequeue();
+            preOrderTraversalHelper (toReturn, "");
+            return toReturn;
+    }
+
+
+void preOrderTraversalHelper(NodeData* root, const string& path)
+    {
+        if (root == nullptr)
+        {
+            return;
+        }
+
+        if (root->data != '\0')
+        {
+            cout << "Tree representation:" << endl;
+            cout << "Visited: " << root->data << ", Path: " << path << endl;
+        }
+
+        preOrderTraversalHelper(root->left, path + "0");
+        preOrderTraversalHelper(root->right, path + "1");
+        }
+
+    string decodeBinaryFile(const string& inputFileName)
+    {
+        ifstream inputFile(inputFileName, ios::binary);
+        int buffr = buff();
+        if (!inputFile.is_open())
+        {
+            cerr << "Error opening input file!" << endl;
+            return "";
+        }
+
+        string decodedString;
+        char ch;
+        NodeData* current = root;
+        int charsRead = 0;
+        int counter = 0;
+        string huffmman;
+
+        //ascii - decimal -
+
+            while (inputFile.get(ch))
+                {
+                counter ++;
+                for (int i = 7; i >= 0; --i)
+                {
+                    if (ch & (1 << i))
+                    {
+                        current = current->right;
+                        huffmman+= '1';
+                    } else
+                    {
+                        current = current->left;
+                        huffmman+= '0';
+                    }
+
+                    if (current->left == nullptr && current->right == nullptr)
+                    {
+                        current = root;
+                    }
+                }
+                cout << endl << "Binary of the text:" << endl << huffmman << ch;
+                }
+                    current = root;
+
+
+            int length = (counter * 8) - buffr;
+            for (int i = 0; i < length; i++)
+            {
+                //follow 0's and 1's
+                if (huffmman[i] == '0')
+                {
+                    current = current->left;
+
+                    if (current->left == NULL && current->right == NULL) //leaf
+                    {
+                        decodedString += current->data;
+                        current = root;
+                    }
+                } else if (huffmman[i] == '1')
+                {
+                    current = current->right;
+
+                    if (current->left == NULL && current->right == NULL) //leaf
+                    {
+
+                        decodedString += current->data;
+                        current = root;
+                    }
+                }
+
+                //if leaf is reached, go back to root
+            }
+
+            cout << endl << endl << "DECOMPRESSED TEXT:" << decodedString << endl;
+
+            inputFile.close();
+            return decodedString;
+        }
+
+    void saveDecodedStringToFile(const string& decodedString, const string& outputFileName)
+    {
+        ofstream outputFile(outputFileName);
+
+        if (!outputFile.is_open())
+            {
+                cerr << "Error opening output file!" << endl;
+                return;
+            }
+
+            outputFile << decodedString;
+            outputFile.close();
+        }
+    };
+
+    int main() {
+        ifstream treeFile("HuffmanTree.tne");
+        string inputFileName2 = "Buffer.tne";
+        if (!treeFile.is_open())
+        {
+            cerr << "Error opening Huffman tree file!" << endl;
+            return 1;
+        }
+
+        HuffmanDecoding huffmanDecoding;
+        NodeData *root = huffmanDecoding.buildHuffmanTree(treeFile);
+        treeFile.close();
+
+        huffmanDecoding = HuffmanDecoding(root);
+
+        string inputFileName = "Compressed.tne";
+        string outputFileName = "Decompressed.tne";
+
+        string decodedString = huffmanDecoding.decodeBinaryFile(inputFileName);
+
+        huffmanDecoding.saveDecodedStringToFile(decodedString, outputFileName);
+
+        cout <<  endl <<"Decompressed File Successfully Created!" << endl;
+
+        return 0;
+    }
